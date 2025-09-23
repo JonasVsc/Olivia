@@ -9,5 +9,5 @@ struct WindowParams
 
 struct PlatformCreateInfo
 {
-	const WindowParams* window_params;
+	const WindowParams* pWindowParams;
 };

@@ -9,7 +9,7 @@ Win32Platform* Win32Platform::Init(const PlatformCreateInfo* pc)
 
     if (p)
     {
-        if (!p->create_window(pc->window_params->pTitle, pc->window_params->width, pc->window_params->height))
+        if (!p->create_window(pc->pWindowParams->pTitle, pc->pWindowParams->width, pc->pWindowParams->height))
         {
             delete p;
             return nullptr;

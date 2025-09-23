@@ -1,4 +1,5 @@
 #include "Platform/Platform.h"
+#include "Renderer/Renderer.h"
 
 #ifdef OLIVIA_WIN32
 
@@ -11,11 +12,17 @@ int WINAPI wWinMain(
     WindowParams wp{ "Olivia Editor", 1280, 720 };
 
     PlatformCreateInfo platform_create_info{
-        .window_params = &wp
+        .pWindowParams = &wp
     };
 
     Platform* platform = Platform::Init(&platform_create_info);
-    
+
+    RendererCreateInfo renderer_create_info{
+        
+    };
+
+    Renderer* renderer = Renderer::Init(&renderer_create_info);
+
     // Run
     {
         while (platform->IsRunning())
@@ -25,6 +32,7 @@ int WINAPI wWinMain(
     }
 
     // Cleanup
+    Renderer::Destroy(renderer);
     Platform::Destroy(platform);
     return EXIT_SUCCESS;
 }
