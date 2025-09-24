@@ -11,11 +11,13 @@ public:
 
 	static void Destroy(Win32Platform* p);
 
+	void PollEvents();
+
 	bool IsRunning() const { return running; }
 
 	void Quit() { running = false; }
 
-	void PollEvents();
+	HWND GetHandle() const { return window; }
 
 private:
 

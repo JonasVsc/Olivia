@@ -38,3 +38,8 @@ if(USE_VULKAN)
     target_compile_definitions(Olivia PRIVATE OLIVIA_VULKAN)
     target_link_libraries(Olivia PRIVATE Vulkan::Vulkan)
 endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    message(STATUS "Configuring Debug build")
+    target_compile_definitions(Olivia PRIVATE OLIVIA_DEBUG)
+endif()

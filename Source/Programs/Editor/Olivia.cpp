@@ -16,18 +16,35 @@ int WINAPI wWinMain(
     };
 
     Platform* platform = Platform::Init(&platform_create_info);
+    if (!platform)
+    {
+        abort();
+        return -1;
+    }
 
     RendererCreateInfo renderer_create_info{
-        
+        .pWindow = platform->GetHandle()
     };
 
     Renderer* renderer = Renderer::Init(&renderer_create_info);
+    if (!renderer)
+    {
+        abort();
+        return -1;
+    }
 
     // Run
     {
-        while (platform->IsRunning())
+        for (;;)
         {
             platform->PollEvents();
+
+            if (!platform->IsRunning())
+                break;
+
+            renderer->BeginFrame();
+
+            renderer->EndFrame();
         }
     }
 
