@@ -1,5 +1,9 @@
+#include "Common/Allocator.h"
+#include "Common//Defines.h"
+
 #include "Platform/Platform.h"
 #include "Renderer/Renderer.h"
+#include "Graphics/Graphics.h"
 
 #ifdef OLIVIA_WIN32
 
@@ -9,13 +13,15 @@ int WINAPI wWinMain(
     _In_     PWSTR     pCmdLine,
     _In_     int       nShowCmd)
 {
+    BigAllocator permanent_storage(GIGABYTES(1));
+
     WindowParams wp{ "Olivia Editor", 1280, 720 };
 
     PlatformCreateInfo platform_create_info{
         .pWindowParams = &wp
     };
 
-    Platform* platform = Platform::Init(&platform_create_info);
+    Platform* platform = Platform::Init(&permanent_storage, &platform_create_info);
     if (!platform)
     {
         abort();
@@ -26,7 +32,7 @@ int WINAPI wWinMain(
         .pWindow = platform->GetHandle()
     };
 
-    Renderer* renderer = Renderer::Init(&renderer_create_info);
+    Renderer* renderer = Renderer::Init(&permanent_storage, &renderer_create_info);
     if (!renderer)
     {
         abort();

@@ -6,11 +6,13 @@
 
 constexpr uint32_t MAX_CONCURRENT_FRAMES{ 2 };
 
+struct BigAllocator;
+
 class VulkanRenderer
 {
 public:
 
-	static VulkanRenderer* Init(const RendererCreateInfo* rc);
+	static VulkanRenderer* Init(BigAllocator* allocator, const RendererCreateInfo* rc);
 
 	static void Destroy(VulkanRenderer* r);
 

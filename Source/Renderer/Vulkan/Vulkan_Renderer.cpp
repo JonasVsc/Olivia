@@ -1,4 +1,6 @@
 #include "Vulkan_Renderer.h"
+#include "Common/Allocator.h"
+
 #include <cassert>
 #include <cstdlib>
 
@@ -10,15 +12,15 @@
 	#include "vulkan/vulkan_win32.h"
 #endif
 
-VulkanRenderer* VulkanRenderer::Init(const RendererCreateInfo* rc)
+VulkanRenderer* VulkanRenderer::Init(BigAllocator* allocator, const RendererCreateInfo* rc)
 {
-	VulkanRenderer* r = static_cast<VulkanRenderer*>(calloc(1, sizeof(VulkanRenderer)));
+
+	VulkanRenderer* r = static_cast<VulkanRenderer*>(allocator->Allocate(sizeof(VulkanRenderer)));
 
 	if (r)
 	{
 		if (!rc->pWindow)
 		{
-			delete r;
 			return nullptr;
 		}
 
@@ -26,19 +28,16 @@ VulkanRenderer* VulkanRenderer::Init(const RendererCreateInfo* rc)
 
 		if (!r->create_device())
 		{
-			delete r;
 			return nullptr;
 		}
 
 		if (!r->create_swapchain())
 		{
-			delete r;
 			return nullptr;
 		}
 
 		if (!r->create_frames())
 		{
-			delete r;
 			return nullptr;
 		}
 	}
@@ -73,8 +72,6 @@ void VulkanRenderer::Destroy(VulkanRenderer* r)
 	vkDestroyDevice(r->device, nullptr);
 	vkDestroySurfaceKHR(r->instance, r->surface, nullptr);
 	vkDestroyInstance(r->instance, nullptr);
-
-	delete r;
 }
 
 void VulkanRenderer::BeginFrame()

@@ -3,11 +3,13 @@
 
 #include "Platform/PlatformCreateInfo.h"
 
+struct BigAllocator;
+
 struct Win32Platform
 {
 public:
 
-	static Win32Platform* Init(const PlatformCreateInfo* pc);
+	static Win32Platform* Init(BigAllocator* allocator, const PlatformCreateInfo* pc);
 
 	static void Destroy(Win32Platform* p);
 
@@ -18,6 +20,10 @@ public:
 	void Quit() { running = false; }
 
 	HWND GetHandle() const { return window; }
+
+	static void* Allocate(size_t size);
+
+	static void Free(void* mem);
 
 private:
 
