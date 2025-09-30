@@ -12,7 +12,7 @@
 	#include "vulkan/vulkan_win32.h"
 #endif
 
-VulkanRenderer* VulkanRenderer::Init(BigAllocator* allocator, const RendererCreateInfo* rc)
+VulkanRenderer* VulkanRenderer::Init(Allocator* allocator, const RendererCreateInfo* rc)
 {
 
 	VulkanRenderer* r = static_cast<VulkanRenderer*>(allocator->Allocate(sizeof(VulkanRenderer)));

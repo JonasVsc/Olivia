@@ -2,9 +2,9 @@
 #include "Common/Allocator.h"
 #include "Common/Defines.h"
 
-TEST_CASE("BigAllocator works")
+TEST_CASE("Allocator works")
 {
-	BigAllocator allocator(GIGABYTES(4));
+	Allocator allocator(GIGABYTES(4));
 	void* dummy[10];
 	
 	dummy[0]  = allocator.Allocate(MEGABYTES(200));
@@ -12,15 +12,4 @@ TEST_CASE("BigAllocator works")
 	dummy[2]  = allocator.Allocate(MEGABYTES(300));
 	dummy[3]  = allocator.Allocate(MEGABYTES(300));
 	dummy[4]  = allocator.Allocate(MEGABYTES(125));
-}
-
-TEST_CASE("SmallAllocator works")
-{
-	SmallAllocator allocator(MEGABYTES(20));
-	void* dummy[10];
-
-	dummy[0] = allocator.Allocate(MEGABYTES(4));
-	dummy[2] = allocator.Allocate(MEGABYTES(5));
-	dummy[3] = allocator.Allocate(MEGABYTES(5));
-	dummy[3] = allocator.Allocate(MEGABYTES(5));
 }

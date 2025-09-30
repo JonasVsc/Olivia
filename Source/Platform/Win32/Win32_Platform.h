@@ -3,13 +3,13 @@
 
 #include "Platform/PlatformCreateInfo.h"
 
-struct BigAllocator;
+struct Allocator;
 
 struct Win32Platform
 {
 public:
 
-	static Win32Platform* Init(BigAllocator* allocator, const PlatformCreateInfo* pc);
+	static Win32Platform* Init(Allocator* allocator, const PlatformCreateInfo* pc);
 
 	static void Destroy(Win32Platform* p);
 

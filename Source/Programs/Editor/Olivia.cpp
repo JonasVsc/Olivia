@@ -13,7 +13,7 @@ int WINAPI wWinMain(
     _In_     PWSTR     pCmdLine,
     _In_     int       nShowCmd)
 {
-    BigAllocator permanent_storage(GIGABYTES(1));
+    Allocator permanent_storage(GIGABYTES(1));
 
     WindowParams wp{ "Olivia Editor", 1280, 720 };
 

@@ -5,7 +5,7 @@
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-Win32Platform* Win32Platform::Init(BigAllocator* allocator, const PlatformCreateInfo* pc)
+Win32Platform* Win32Platform::Init(Allocator* allocator, const PlatformCreateInfo* pc)
 {
     Win32Platform* p = static_cast<Win32Platform*>(allocator->Allocate(sizeof(Win32Platform)));
 
