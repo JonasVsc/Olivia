@@ -7,11 +7,21 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 Win32Platform* Win32Platform::Init(Allocator* allocator, const PlatformCreateInfo* pc)
 {
+#ifdef OLIVIA_DEBUG
+    AllocConsole(); FILE* file;
+    freopen_s(&file, "CONOUT$", "w", stdout);
+#endif // OLIVIA_DEBUG
+
     Win32Platform* p = static_cast<Win32Platform*>(allocator->Allocate(sizeof(Win32Platform)));
 
     if (p)
     {
         if (!p->create_window(pc->pWindowParams->pTitle, pc->pWindowParams->width, pc->pWindowParams->height))
+        {
+            return nullptr;
+        }
+
+        if (!p->load_game_module())
         {
             return nullptr;
         }
@@ -28,6 +38,14 @@ void Win32Platform::Destroy(Win32Platform* p)
     DestroyWindow(p->window);
 }
 
+void Win32Platform::Update()
+{
+    if (game_module.Update)
+    {
+        game_module.Update();
+    }
+}
+
 void Win32Platform::PollEvents()
 {
     MSG msg = {};
@@ -37,6 +55,15 @@ void Win32Platform::PollEvents()
         {
             Quit();
             break;
+        }
+
+        if (msg.message == WM_KEYDOWN)
+        {
+            if (msg.wParam == VK_F5)
+            {
+                printf("Reloading modules\n");
+                load_game_module();
+            }
         }
 
         TranslateMessage(&msg);
@@ -87,12 +114,33 @@ bool Win32Platform::create_window(const char* title, int32_t w, int32_t h)
     return true;
 }
 
+bool Win32Platform::load_game_module()
+{
+    if (game_module.handle)
+    {
+        FreeLibrary(static_cast<HMODULE>(game_module.handle));
+    }
+
+    while (!CopyFileA("OliviaEditor.dll", "_OliviaEditor.dll", 0)) Sleep(200);
+
+    game_module.handle = LoadLibraryA("_OliviaEditor.dll");
+    if (!game_module.handle)
+    {
+        printf("Failed on loading _OliviaEditor.dll\n");
+        return false;
+    }
+
+    game_module.Update = reinterpret_cast<PFN_Update*>(GetProcAddress(static_cast<HMODULE>(game_module.handle), "Update"));
+
+    return true;
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch (msg) 
     {
     case WM_DESTROY:
-        PostQuitMessage(0);    // posts WM_QUIT
+        PostQuitMessage(0);
         return 0;
     }
     return DefWindowProc(hwnd, msg, wParam, lParam);

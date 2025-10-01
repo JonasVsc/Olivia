@@ -45,6 +45,8 @@ int WINAPI wWinMain(
         {
             platform->PollEvents();
 
+            platform->Update();
+
             if (!platform->IsRunning())
                 break;
 

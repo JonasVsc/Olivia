@@ -16,7 +16,6 @@ if(WIN32)
 
     set(OLIVIA_PLATFORM "${CMAKE_SOURCE_DIR}/Source/Platform/Win32/Win32_Platform.cpp")
 
-    # Editor
     add_executable(Olivia WIN32 "Olivia.cpp" ${OLIVIA_PLATFORM} ${OLIVIA_GRAPHICS} ${OLIVIA_COMMON})
     target_compile_definitions(Olivia PRIVATE OLIVIA_WIN32)
 else()
@@ -32,3 +31,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Configuring Debug build")
     target_compile_definitions(Olivia PRIVATE OLIVIA_DEBUG)
 endif()
+
+
+
+# EDITOR MODULE
+add_library(OliviaEditor SHARED "Olivia_Editor.cpp")
