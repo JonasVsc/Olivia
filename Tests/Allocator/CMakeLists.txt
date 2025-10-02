@@ -2,7 +2,9 @@
 set(OLIVIA_COMMON "${CMAKE_SOURCE_DIR}/Source/Common/Allocator.cpp")
 
 if(WIN32)
-    set(OLIVIA_PLATFORM "${CMAKE_SOURCE_DIR}/Source/Platform/Win32/Win32_Platform.cpp")
+    set(OLIVIA_PLATFORM 
+        "${CMAKE_SOURCE_DIR}/Source/Platform/Win32/Win32_Platform.cpp" 
+        "${CMAKE_SOURCE_DIR}/Source/Platform/Module.cpp")
     
     add_executable(TestAllocator "Test.cpp" ${OLIVIA_PLATFORM} ${OLIVIA_COMMON})
     target_compile_definitions(TestAllocator PRIVATE OLIVIA_WIN32)

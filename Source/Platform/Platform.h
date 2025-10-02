@@ -6,4 +6,3 @@
 #else
 	#error win32 only
 #endif
-

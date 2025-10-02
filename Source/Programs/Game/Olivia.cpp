@@ -13,15 +13,15 @@ int WINAPI wWinMain(
     _In_     PWSTR     pCmdLine,
     _In_     int       nShowCmd)
 {
-    Allocator permanent_storage(GIGABYTES(1));
+    Allocator allocator(GIGABYTES(1));
 
     WindowParams wp{ "Olivia Editor", 1280, 720 };
 
     PlatformCreateInfo platform_create_info{
-        .pWindowParams = &wp
+        .pWindowParams = &wp,
     };
 
-    Platform* platform = Platform::Init(&permanent_storage, &platform_create_info);
+    Platform* platform = Platform::Init(&allocator, &platform_create_info);
     if (!platform)
     {
         abort();
@@ -32,7 +32,7 @@ int WINAPI wWinMain(
         .pWindow = platform->GetHandle()
     };
 
-    Renderer* renderer = Renderer::Init(&permanent_storage, &renderer_create_info);
+    Renderer* renderer = Renderer::Init(&allocator, &renderer_create_info);
     if (!renderer)
     {
         abort();

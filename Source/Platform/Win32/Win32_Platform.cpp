@@ -2,6 +2,7 @@
 #include "Common/Allocator.h"
 
 #include <cassert>
+#include <cstring>
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -16,15 +17,20 @@ Win32Platform* Win32Platform::Init(Allocator* allocator, const PlatformCreateInf
 
     if (p)
     {
+        p->allocator = allocator;
+
         if (!p->create_window(pc->pWindowParams->pTitle, pc->pWindowParams->width, pc->pWindowParams->height))
         {
             return nullptr;
         }
 
-        if (!p->load_game_module())
+        if (!p->main_module.Load(allocator))
         {
             return nullptr;
         }
+
+        QueryPerformanceFrequency(&p->frequency);
+        QueryPerformanceCounter(&p->last_frame);
 
         p->running = true;
     }
@@ -40,34 +46,54 @@ void Win32Platform::Destroy(Win32Platform* p)
 
 void Win32Platform::Update()
 {
-    if (game_module.Update)
+    // Calculate delta time
+    LARGE_INTEGER  curr_frame;
+    QueryPerformanceCounter(&curr_frame);
+    float dt = static_cast<float>(curr_frame.QuadPart - last_frame.QuadPart) / frequency.QuadPart;
+    last_frame = curr_frame;
+
+    if (main_module.Func_Update)
     {
-        game_module.Update();
+        main_module.Func_Update(main_module.memory, &input, dt);
     }
 }
 
 void Win32Platform::PollEvents()
 {
+    memcpy(input.previousKeys, input.currentKeys, sizeof(input.currentKeys));
+
     MSG msg = {};
     while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
     {
-        if (msg.message == WM_QUIT)
+        switch (msg.message)
         {
-            Quit();
+        case WM_QUIT:
+            running = false;
             break;
-        }
+        case WM_KEYDOWN:
 
-        if (msg.message == WM_KEYDOWN)
-        {
-            if (msg.wParam == VK_F5)
+            if (msg.wParam >= 0 && msg.wParam < 256)
             {
-                printf("Reloading modules\n");
-                load_game_module();
+                input.currentKeys[msg.wParam] = true;
             }
+            break;
+
+        case WM_KEYUP:
+            if (msg.wParam >= 0 && msg.wParam < 256)
+            {
+                input.currentKeys[msg.wParam] = false;
+            }
+            break;
         }
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);
+    }
+
+    if (input.IsKeyPressed(VK_F5))
+    {
+        printf("Reloading modules\n");
+        main_module.Load(allocator);
     }
 }
 
@@ -110,27 +136,6 @@ bool Win32Platform::create_window(const char* title, int32_t w, int32_t h)
     }
 
     ShowWindow(window, SW_SHOWNORMAL);
-
-    return true;
-}
-
-bool Win32Platform::load_game_module()
-{
-    if (game_module.handle)
-    {
-        FreeLibrary(static_cast<HMODULE>(game_module.handle));
-    }
-
-    while (!CopyFileA("OliviaEditor.dll", "_OliviaEditor.dll", 0)) Sleep(200);
-
-    game_module.handle = LoadLibraryA("_OliviaEditor.dll");
-    if (!game_module.handle)
-    {
-        printf("Failed on loading _OliviaEditor.dll\n");
-        return false;
-    }
-
-    game_module.Update = reinterpret_cast<PFN_Update*>(GetProcAddress(static_cast<HMODULE>(game_module.handle), "Update"));
 
     return true;
 }

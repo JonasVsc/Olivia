@@ -2,16 +2,10 @@
 #include <Windows.h>
 
 #include "Platform/PlatformCreateInfo.h"
+#include "Platform/Module.h"
+#include "Shared/Input.h"
 
 struct Allocator;
-
-typedef void (PFN_Update)(void);
-
-struct Module
-{
-	void* handle;
-	PFN_Update* Update;
-};
 
 struct Win32Platform
 {
@@ -21,13 +15,12 @@ public:
 
 	static void Destroy(Win32Platform* p);
 
+
 	void Update();
 
 	void PollEvents();
 
 	bool IsRunning() const { return running; }
-
-	void Quit() { running = false; }
 
 	HWND GetHandle() const { return window; }
 
@@ -38,14 +31,20 @@ public:
 private:
 
 	bool create_window(const char* title, int32_t w, int32_t h);
-
-	bool load_game_module();
 	
 private:
+
+	Allocator* allocator;
 
 	HWND window;
 
 	bool running;
+	
+	InputState input;
+	
+	Module main_module;
 
-	Module game_module;
+	LARGE_INTEGER frequency;
+	LARGE_INTEGER last_frame;
+	LARGE_INTEGER delta_itme;
 };
