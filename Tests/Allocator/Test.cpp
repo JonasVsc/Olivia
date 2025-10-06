@@ -1,5 +1,4 @@
 #include <catch2/catch_test_macros.hpp>
-#include "Common/Allocator.h"
 #include "Common/Defines.h"
 
 TEST_CASE("Allocator works")
