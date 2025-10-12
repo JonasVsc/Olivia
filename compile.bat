@@ -1,0 +1,2 @@
+glslangValidator -V Engine/Source/Shaders/olivia_2d.vert -o Engine/Source/Shaders/olivia_2d.vert.spv
+glslangValidator -V Engine/Source/Shaders/olivia_2d.frag -o Engine/Source/Shaders/olivia_2d.frag.spv

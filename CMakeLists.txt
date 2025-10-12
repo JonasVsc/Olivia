@@ -14,12 +14,13 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})   # for static libraries
 
 
 option(USE_VULKAN "Use Vulkan as graphics api" ON)
-
 set(CMAKE_CXX_STANDARD 20)
-include_directories(Source)
 
-# PROGRAMS
-add_subdirectory(Source/Programs)
+set(ENGINE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Source")
+set(ENGINE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Engine/Include")
+
+add_subdirectory(Engine)
+add_subdirectory(Game)
 
 # TESTS
 add_subdirectory(Thirdparty/Catch2)
