@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.31)
 
 project("Olivia"
         VERSION 3.31
-        DESCRIPTION "Olivia Gaming Platform/Engine"
+        DESCRIPTION "Olivia Platform/Engine"
         LANGUAGES CXX)
 
 # Shared output folder
@@ -12,17 +12,27 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN_DIR})   # for executables and DLLs
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BIN_DIR})   # for shared libraries
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})   # for static libraries
 
-
-option(USE_VULKAN "Use Vulkan as graphics api" ON)
-
 set(CMAKE_CXX_STANDARD 20)
-include_directories(Source)
 
-# PROGRAMS
-add_subdirectory(Source/Programs)
+set(ENGINE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Source")
+set(ENGINE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Engine/Include")
 
-# TESTS
-add_subdirectory(Thirdparty/Catch2)
+find_package(Vulkan)
 
-#enable_testing()
-#add_subdirectory(Tests)
+include(FetchContent)
+FetchContent_Declare(
+    SDL3
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG release-3.2.20
+)
+
+FetchContent_Declare(
+    EnTT
+    GIT_REPOSITORY https://github.com/skypjack/entt.git
+    GIT_TAG v3.15.0
+)
+
+FetchContent_MakeAvailable(SDL3)
+FetchContent_MakeAvailable(EnTT)
+
+add_subdirectory("Engine")
