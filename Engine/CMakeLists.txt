@@ -4,6 +4,7 @@ include_directories(Source)
 set(OLIVIA_SOURCE
 	"Source/Olivia_Graphics.cpp"
 	"Source/Olivia_Runtime.cpp"
+	"Source/Olivia_Events.cpp"
 	"Source/Olivia_Engine.cpp"
 )
 

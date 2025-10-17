@@ -22,38 +22,20 @@ namespace Olivia
 
 	void Engine::run()
 	{
-		// Pipelines
-		PipelineHandle opaque_pipeline = m_renderer->get_pipeline(PIPELINE_OPAQUE);
-
-		// Registry
-		entt::registry registry{};
-		registry.ctx().emplace<InputState>();
-		// Create entity
-		auto entity = registry.create();
-
-		// Assign components
-		registry.emplace<CMesh>(entity, MESH_QUAD);
-		registry.emplace<CPosition>(entity, 0.0f, 0.0f, 0.0f);
-		registry.emplace<CRotation>(entity, 0.0f, 0.0f, 0.0f);
-		registry.emplace<CScale>(entity, 0.0f, 0.0f, 0.0f);
-		
-		SDL_Event event;
-
 		while (m_running)
 		{
+			update_input_state();
+
+			SDL_Event event;
 			while (SDL_PollEvent(&event))
 			{
 				if(event.type == SDL_EVENT_QUIT)
 					m_running = false;
 
-				InputSystem(registry, event);
+				InputSystem::update(event);
 			}
 
-			MovementSystem(registry, 0.016f);
-
 			m_renderer->begin_frame();
-
-			RenderSystem(registry);
 
 			m_renderer->end_frame();
 		}

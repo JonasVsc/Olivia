@@ -708,7 +708,7 @@ namespace Olivia
 		return nullptr;
 	}
 
-	Mesh::Mesh(VulkanCore& core)
+	MeshAtlas::MeshAtlas(VulkanCore& core)
 		: m_core{core}
 	{
 		m_vertex_buffer = create_buffer(
@@ -758,13 +758,13 @@ namespace Olivia
 		}
 	}
 
-	Mesh::~Mesh()
+	MeshAtlas::~MeshAtlas()
 	{
 		vmaDestroyBuffer(m_core.get_allocator(), m_vertex_buffer.buffer, m_vertex_buffer.allocation);
 		vmaDestroyBuffer(m_core.get_allocator(), m_index_buffer.buffer, m_index_buffer.allocation);
 	}
 
-	void Mesh::upload_mesh(const MeshInfo& info, MeshType type)
+	void MeshAtlas::upload_mesh(const MeshInfo& info, MeshType type)
 	{
 
 	}

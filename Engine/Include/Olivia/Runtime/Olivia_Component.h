@@ -1,12 +1,17 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "Olivia/Olivia_Graphics.h"
 
 namespace Olivia
 {
-	typedef uint32_t CMesh;
 
-	struct CPosition { float x, y, z; };
-	struct CRotation { float x, y, z; };
-	struct CScale    { float x, y, z; };
+	using CMesh = MeshInfo;
+
+	struct CTransform 
+	{
+		glm::vec3 position;
+		glm::vec3 rotation;
+		glm::vec3 scale;
+	};
 
 } // Olivia

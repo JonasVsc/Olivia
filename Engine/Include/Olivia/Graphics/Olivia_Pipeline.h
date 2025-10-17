@@ -1,5 +1,5 @@
 #pragma once
-#include "Olivia_Graphics.h"
+#include "Olivia_VulkanCore.h"
 
 namespace Olivia
 {

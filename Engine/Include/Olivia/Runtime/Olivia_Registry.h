@@ -1,14 +1,25 @@
 #pragma once
 #include "Olivia/Olivia_Core.h"
-#include "Olivia_Component.h"
+#include "Olivia/Olivia_Graphics.h"
 
-#include "entt/entity/registry.hpp"
+#include "Olivia_Component.h"
 
 namespace Olivia
 {
-	struct InputState
+	constexpr uint32_t MAX_ENTITIES{ 10 };
+
+	class Registry
 	{
-		bool keys[SDL_SCANCODE_COUNT] = { false }; // keycode -> pressed
+	public:
+
+		Registry();
+		Registry(const Registry&) = delete;
+		~Registry();
+
+	private:
+
+		CMesh mesh[MAX_ENTITIES]{};
+		CTransform transform[MAX_ENTITIES]{};
 	};
 
 } // Olivia

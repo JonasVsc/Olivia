@@ -1,5 +1,6 @@
 #pragma once
 #include "Olivia/Olivia_Core.h"
+#include "Olivia/Olivia_Events.h"
 #include "Olivia/Olivia_Graphics.h"
 #include "Olivia/Olivia_Runtime.h"
 
@@ -16,8 +17,9 @@ namespace Olivia
 		void run();
 
 	private:
-		bool           m_running{};
-		SDL_Window*    m_window{};
-		Renderer*      m_renderer{};
+		
+		bool        m_running{};
+		SDL_Window* m_window{};
+		Renderer*   m_renderer{};
 	};
 } // Olivia
