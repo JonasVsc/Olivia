@@ -10,5 +10,5 @@ layout (location = 3) in mat4 inTransform;
 
 void main()
 {
-	gl_Position = vec4(inPosition, 1.0);
+	gl_Position = inTransform * vec4(inPosition, 1.0);
 }

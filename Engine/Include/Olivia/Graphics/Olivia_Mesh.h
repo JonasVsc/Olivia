@@ -25,15 +25,16 @@ namespace Olivia
 		MeshAtlas(const MeshAtlas&) = delete;
 		~MeshAtlas();
 
-		void upload_mesh(const MeshInfo& info, MeshType type);
-
-		Buffer      m_vertex_buffer{};
-		Buffer      m_index_buffer{};
-		MeshInfo    m_mesh[MESH_MAX]{};
+		inline VkBuffer& get_vertex_buffer() { return m_vertex_buffer.buffer; }
+		inline VkBuffer& get_index_buffer() { return m_index_buffer.buffer; }
+		inline MeshInfo& get_mesh(uint32_t id) { return m_mesh[id]; }
 
 	private:
 
 		VulkanCore& m_core;
+		Buffer      m_vertex_buffer{};
+		Buffer      m_index_buffer{};
+		MeshInfo    m_mesh[MESH_MAX]{};
 	};
 
 } // Olivia

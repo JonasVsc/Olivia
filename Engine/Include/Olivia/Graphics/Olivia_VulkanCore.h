@@ -26,7 +26,7 @@ namespace Olivia
 
 	struct Instance
 	{
-		float transform[16];
+		glm::mat4 transform;
 	};
 
 	class VulkanCore

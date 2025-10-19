@@ -10,11 +10,18 @@ namespace Olivia
 		{
 			SDL_ShowWindow(m_window);
 			m_renderer = new Renderer(*m_window);
+
+			if (m_renderer)
+			{
+				m_registry = new Registry(*m_renderer);
+			}
 		}
+
 	}
 
 	Engine::~Engine()
 	{
+		delete m_registry;
 		delete m_renderer;
 		SDL_DestroyWindow(m_window);
 		SDL_Quit();
@@ -22,6 +29,26 @@ namespace Olivia
 
 	void Engine::run()
 	{
+		RenderSystem render_system(*m_registry, *m_renderer);
+		MovementSystem movement_system(*m_registry);
+
+		EntityID entity = m_registry->create({
+				.position = { 0.0f, 0.0f, 0.0f },
+				.rotation = { 0.0f, 0.0f, 0.0f },
+				.scale    = { 0.2f, 0.2f, 1.0f },
+				.mesh     = MESH_QUAD,
+				.is_renderable = true
+		});
+
+		entity = m_registry->create({
+				.position = { 0.5f, 0.4f, 0.0f },
+				.rotation = { 0.0f, 0.0f, 0.0f },
+				.scale = { 0.2f, 0.2f, 1.0f },
+				.mesh = MESH_QUAD,
+				.is_renderable = true,
+				.is_player = true
+			});
+
 		while (m_running)
 		{
 			update_input_state();
@@ -35,26 +62,14 @@ namespace Olivia
 				InputSystem::update(event);
 			}
 
+			movement_system.update();
+
 			m_renderer->begin_frame();
+
+			render_system.draw();
 
 			m_renderer->end_frame();
 		}
 	}
 
 } // Olivia
-
-int main(int argc, char* argv[])
-{
-	Olivia::Engine eng("Olivia Engine", 640, 480);
-
-	try
-	{
-		eng.run();
-	}
-	catch (std::exception& e)
-	{
-		printf("%s\n", e.what());
-	}
-
-	return 0;
-}

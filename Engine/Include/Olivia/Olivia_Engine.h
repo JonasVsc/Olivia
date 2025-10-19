@@ -21,5 +21,6 @@ namespace Olivia
 		bool        m_running{};
 		SDL_Window* m_window{};
 		Renderer*   m_renderer{};
+		Registry*   m_registry{};
 	};
 } // Olivia

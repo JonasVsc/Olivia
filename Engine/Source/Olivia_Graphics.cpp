@@ -483,26 +483,129 @@ namespace Olivia
 		}
 	}
 
-	Pipeline::Pipeline(VulkanCore& core)
+	DescriptorManager::DescriptorManager(VulkanCore& core)
 		: m_core{core}
 	{
-		create_pipeline({
-			.vertex_shader_path = "olivia.vert.spv",
-			.fragment_shader_path = "olivia.frag.spv"
-			}, PIPELINE_OPAQUE);
+		init_uniforms();
+		create_descriptor_pool();
+		create_descriptor_set_layout();
+		allocate_descriptor_sets();
 	}
 
-	Pipeline::~Pipeline()
+	DescriptorManager::~DescriptorManager()
 	{
-		for (uint32_t i = 0; i < PIPELINE_MAX; ++i)
+		for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+			vmaDestroyBuffer(m_core.get_allocator(), m_uniform_buffer[i].buffer, m_uniform_buffer[i].allocation);
+
+		vkDestroyDescriptorSetLayout(m_core.get_device(), m_descriptor_set_layout, nullptr);
+		vkDestroyDescriptorPool(m_core.get_device(), m_descriptor_pool, nullptr);
+	}
+
+	void DescriptorManager::init_uniforms()
+	{
+		for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+		{
+			m_uniform_buffer[i] = create_buffer(
+				m_core.get_allocator(),
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VMA_MEMORY_USAGE_AUTO,
+				VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+				sizeof(UniformData));
+		}
+	}
+
+	void DescriptorManager::create_descriptor_pool()
+	{
+		VkDescriptorPoolSize pool_sizes[]
+		{
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_CONCURRENT_FRAMES },
+		};
+
+		VkDescriptorPoolCreateInfo descriptor_pool_info
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			.maxSets = MAX_CONCURRENT_FRAMES,
+			.poolSizeCount = ARRAY_SIZE(pool_sizes),
+			.pPoolSizes = pool_sizes
+		};
+
+		VK_CHECK(vkCreateDescriptorPool(m_core.get_device(), &descriptor_pool_info, nullptr, &m_descriptor_pool));
+	}
+
+	void DescriptorManager::create_descriptor_set_layout()
+	{
+		VkDescriptorSetLayoutBinding set_layout_bindings[]
+		{
+			// View, Projection
+			{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT }
+		};
+
+		VkDescriptorSetLayoutCreateInfo set_layout_info
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			.bindingCount = ARRAY_SIZE(set_layout_bindings),
+			.pBindings = set_layout_bindings
+		};
+
+		VK_CHECK(vkCreateDescriptorSetLayout(m_core.get_device(), &set_layout_info, nullptr, &m_descriptor_set_layout));
+	}
+
+	void DescriptorManager::allocate_descriptor_sets()
+	{
+		VkDescriptorSetAllocateInfo set_allocate_info
+		{
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool = m_descriptor_pool,
+			.descriptorSetCount = 1,
+			.pSetLayouts = &m_descriptor_set_layout,
+		};
+
+		for (uint32_t i = 0; i < MAX_CONCURRENT_FRAMES; ++i)
+		{
+			vkAllocateDescriptorSets(m_core.get_device(), &set_allocate_info, &m_descriptor_set[i]);
+
+			VkDescriptorBufferInfo uniform_info
+			{ 
+				.buffer = m_uniform_buffer[i].buffer,
+				.offset = 0,
+				.range = sizeof(UniformData)
+			};
+
+			VkWriteDescriptorSet write_sets[]
+			{
+				{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = m_descriptor_set[i],
+					.dstBinding = 0,
+					.descriptorCount = 1,
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.pBufferInfo = &uniform_info
+				}
+			};
+
+			vkUpdateDescriptorSets(m_core.get_device(), ARRAY_SIZE(write_sets), write_sets, 0, nullptr);
+		}
+	}
+
+
+	PipelineManager::PipelineManager(VulkanCore& core)
+		: m_core{core}
+	{
+	}
+
+	PipelineManager::~PipelineManager()
+	{
+		for (uint32_t i = 0; i < MAX_PIPELINES; ++i)
 		{
 			vkDestroyPipelineLayout(m_core.get_device(), m_layout[i], nullptr);
 			vkDestroyPipeline(m_core.get_device(), m_pipeline[i], nullptr);
 		}
 	}
 
-	void Pipeline::create_pipeline(const PipelineInfo& info, PipelineType type)
+	PipelineID PipelineManager::create_pipeline(const PipelineInfo& info)
 	{
+		uint32_t id = m_created_pipelines;
+
 		VkShaderModule vert = create_shader_module(m_core.get_device(), info.vertex_shader_path);
 		VkShaderModule frag = create_shader_module(m_core.get_device(), info.fragment_shader_path);
 
@@ -556,10 +659,10 @@ namespace Olivia
 			{2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex, uv)},
 
 			// Per-instance attributes
-			{3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Instance, transform[0])},
-			{4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Instance, transform[4])},
-			{5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Instance, transform[8])},
-			{6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Instance, transform[12])},
+			{3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0},
+			{4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4)},
+			{5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 2},
+			{6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4) * 3},
 		};
 
 		VkPipelineVertexInputStateCreateInfo vertex_input_state_info
@@ -648,9 +751,11 @@ namespace Olivia
 		VkPipelineLayoutCreateInfo layout_info
 		{
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+			.setLayoutCount = info.set_layout_count,
+			.pSetLayouts = info.set_layouts
 		};
 
-		VK_CHECK(vkCreatePipelineLayout(m_core.get_device(), &layout_info, nullptr, &m_layout[type]));
+		VK_CHECK(vkCreatePipelineLayout(m_core.get_device(), &layout_info, nullptr, &m_layout[id]));
 
 		VkGraphicsPipelineCreateInfo pipeline_info
 		{
@@ -665,18 +770,20 @@ namespace Olivia
 			.pMultisampleState = &multisample_state_info,
 			.pColorBlendState = &color_blend_state_info,
 			.pDynamicState = &dynamic_state_info,
-			.layout = m_layout[type],
+			.layout = m_layout[id],
 			.renderPass = VK_NULL_HANDLE,
 			.subpass = 0
 		};
 
-		vkCreateGraphicsPipelines(m_core.get_device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_pipeline[type]);
+		vkCreateGraphicsPipelines(m_core.get_device(), VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &m_pipeline[id]);
 
 		vkDestroyShaderModule(m_core.get_device(), vert, nullptr);
 		vkDestroyShaderModule(m_core.get_device(), frag, nullptr);
+
+		return m_created_pipelines++;
 	}
 
-	VkShaderModule Pipeline::create_shader_module(VkDevice device, const char* shader_path)
+	VkShaderModule PipelineManager::create_shader_module(VkDevice device, const char* shader_path)
 	{
 		SDL_IOStream* io = SDL_IOFromFile(shader_path, "rb");
 		if (io)
@@ -732,10 +839,10 @@ namespace Olivia
 
 			if (vertices && indices)
 			{
-				vertices[0] = { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 0.0f, 0.0f } };
-				vertices[1] = { { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 1.0f, 0.0f } };
+				vertices[0] = { {-1.0f,-1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 0.0f, 0.0f } };
+				vertices[1] = { { 1.0f,-1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 1.0f, 0.0f } };
 				vertices[2] = { { 1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 1.0f, 1.0f } };
-				vertices[3] = { { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 0.0f, 1.0f } };
+				vertices[3] = { {-1.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f },  { 0.0f, 1.0f } };
 
 				indices[0] = 0;
 				indices[1] = 1;
@@ -764,11 +871,60 @@ namespace Olivia
 		vmaDestroyBuffer(m_core.get_allocator(), m_index_buffer.buffer, m_index_buffer.allocation);
 	}
 
-	void MeshAtlas::upload_mesh(const MeshInfo& info, MeshType type)
+	InstanceCache::InstanceCache(VulkanCore& core)
+		: m_core{core}
 	{
-
+		m_instance_buffer = create_buffer(
+			m_core.get_allocator(),
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			sizeof(Instance) * MAX_INSTANCES);
 	}
 
+	InstanceCache::~InstanceCache()
+	{
+		vmaDestroyBuffer(m_core.get_allocator(), m_instance_buffer.buffer, m_instance_buffer.allocation);
+	}
+
+	void InstanceCache::update()
+	{
+	}
+
+	void InstanceCache::cache_it(const Instance& instance, uint32_t mesh_id)
+	{
+		bool found_batch{ false };
+		for (uint32_t i = 0; i < m_batch_count; ++i)
+		{
+			if (mesh_id == m_batches[i].mesh)
+			{
+				InstanceBatch& batch = m_batches[i];
+				batch.instance_count++;
+				found_batch = true;
+				break;
+			}
+		}
+
+		memcpy((char*)m_instance_buffer.info.pMappedData + (sizeof(Instance) * m_instance_count), 
+			&instance.transform, sizeof(Instance));
+
+		if (!found_batch)
+		{
+			InstanceBatch& batch = m_batches[m_batch_count++];
+
+			batch.mesh = mesh_id;
+			batch.instance_offset = m_instance_count;
+			batch.instance_count++;
+		}
+
+		m_instance_count++;
+	}
+
+	void InstanceCache::bind()
+	{
+		VkDeviceSize offsets[]{ 0 };
+		vkCmdBindVertexBuffers(m_core.get_frame_cmd(), 1, 1, &m_instance_buffer.buffer, offsets);
+	}
 
 	Renderer::Renderer(SDL_Window& window)
 		: m_window{window}

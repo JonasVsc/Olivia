@@ -6,6 +6,7 @@ set(OLIVIA_SOURCE
 	"Source/Olivia_Runtime.cpp"
 	"Source/Olivia_Events.cpp"
 	"Source/Olivia_Engine.cpp"
+	"Source/Olivia.cpp"
 )
 
 add_executable(Olivia ${OLIVIA_SOURCE})

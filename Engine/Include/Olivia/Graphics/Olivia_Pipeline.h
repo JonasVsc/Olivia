@@ -3,45 +3,39 @@
 
 namespace Olivia
 {
-	enum PipelineType
+	using PipelineID = uint32_t;
+
+	constexpr uint32_t MAX_PIPELINES{ 10 };
+
+	struct PipelineInfo
 	{
-		PIPELINE_OPAQUE,
-		PIPELINE_MAX
+		const char*            vertex_shader_path{};
+		const char*            fragment_shader_path{};
+		uint32_t               set_layout_count{};
+		VkDescriptorSetLayout* set_layouts{};
 	};
 
-	struct PipelineHandle
+	class PipelineManager
 	{
-		VkPipeline       pipeline;
-		VkPipelineLayout layout;
-	};
-
-	class Pipeline
-	{
-		struct PipelineInfo
-		{
-			const char* vertex_shader_path{};
-			const char* fragment_shader_path{};
-		};
-
 	public:
 
-		Pipeline(VulkanCore& core);
-		Pipeline(const Pipeline&) = delete;
-		~Pipeline();
+		PipelineManager(VulkanCore& core);
+		PipelineManager(const PipelineManager&) = delete;
+		~PipelineManager();
 
-		inline PipelineHandle get_pipeline(PipelineType type)
-		{
-			return PipelineHandle{ m_pipeline[type], m_layout[type] };
-		}
+		PipelineID create_pipeline(const PipelineInfo& info);
+
+		inline VkPipeline       get_pipeline(PipelineID id) { return m_pipeline[id]; }
+		inline VkPipelineLayout get_pipeline_layout(PipelineID id) { return m_layout[id]; }
 
 	private:
 
-		void           create_pipeline(const PipelineInfo& info, PipelineType type);
 		VkShaderModule create_shader_module(VkDevice device, const char* shader_path);
 
 		VulkanCore&      m_core;
-		VkPipeline	     m_pipeline[PIPELINE_MAX];
-		VkPipelineLayout m_layout[PIPELINE_MAX];
+		VkPipeline	     m_pipeline[MAX_PIPELINES]{};
+		VkPipelineLayout m_layout[MAX_PIPELINES]{};
+		PipelineID       m_created_pipelines{};
 	};
 
 } // Olivia

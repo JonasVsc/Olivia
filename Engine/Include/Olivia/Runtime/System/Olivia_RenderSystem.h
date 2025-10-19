@@ -1,6 +1,6 @@
 #pragma once
+#include "Olivia/Olivia_Runtime.h"
 #include "Olivia/Olivia_Graphics.h"
-
 
 namespace Olivia
 {
@@ -8,16 +8,19 @@ namespace Olivia
 	{
 	public:
 
-		RenderSystem(Renderer& renderer);
+		RenderSystem(Registry& registry, Renderer& renderer);
 		RenderSystem(const RenderSystem&) = delete;
 
 		void draw();
 
 	private:
 
-		Renderer&        m_renderer;
-		VkDescriptorPool m_descriptor_pool;
-		VkPipeline       m_pipeline;
-		VkPipelineLayout m_layout;
+		Registry&             m_registry;
+		Renderer&             m_renderer;
+		VkPipeline            m_pipeline{};
+		VkPipelineLayout      m_pipeline_layout{};
+		VkDescriptorSetLayout m_set_layout{};
+		VkDescriptorSet       m_descriptor_set[MAX_CONCURRENT_FRAMES]{};
+		Buffer                m_uniform_buffer[MAX_CONCURRENT_FRAMES];
 	};
 }
