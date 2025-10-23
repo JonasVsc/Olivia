@@ -14,9 +14,6 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BIN_DIR})   # for static libraries
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(ENGINE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/Source")
-set(ENGINE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/Engine/Include")
-
 find_package(Vulkan)
 
 include(FetchContent)
@@ -26,13 +23,47 @@ FetchContent_Declare(
     GIT_TAG release-3.2.20
 )
 
-FetchContent_Declare(
-    EnTT
-    GIT_REPOSITORY https://github.com/skypjack/entt.git
-    GIT_TAG v3.15.0
+FetchContent_MakeAvailable(SDL3)
+
+add_executable(olivia "src/olivia.cpp" "src/olivia_types.h")
+
+target_link_libraries(olivia PRIVATE SDL3::SDL3 Vulkan::Vulkan)
+target_include_directories(olivia PRIVATE include)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	target_compile_definitions(olivia PUBLIC OLIVIA_DEBUG)
+endif()
+
+
+set(SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
+
+set(SHADERS
+	"${SHADER_DIR}/olivia2d.vert"
+	"${SHADER_DIR}/olivia2d.frag"
+	"${SHADER_DIR}/olivia3d.vert"
+	"${SHADER_DIR}/olivia3d.frag")
+
+foreach(SHADER ${SHADERS})
+	get_filename_component(FILE_NAME ${SHADER} NAME)
+	set(SPIRV ${SHADER}.spv)
+
+	add_custom_command(
+		OUTPUT ${SPIRV}
+		COMMAND glslangValidator -V ${SHADER} -o ${SPIRV}
+		DEPENDS ${SHADER}
+		COMMENT "Compiling shader ${FILE_NAME}"
+		VERBATIM)
+
+	list(APPEND COMPILED_SHADERS ${SPIRV})
+endforeach()
+
+add_custom_target(
+	compile_shaders ALL
+	DEPENDS ${COMPILED_SHADERS}
 )
 
-FetchContent_MakeAvailable(SDL3)
-FetchContent_MakeAvailable(EnTT)
-
-add_subdirectory("Engine")
+add_custom_command(TARGET olivia POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "Copying shaders to: $<TARGET_FILE_DIR:olivia>"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${SHADER_DIR}"
+        $<TARGET_FILE_DIR:olivia>)
