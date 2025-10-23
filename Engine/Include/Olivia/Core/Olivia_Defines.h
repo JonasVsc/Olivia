@@ -10,7 +10,7 @@
 
 #define OLIVIA_API extern "C" __declspec(dllexport)
 
-#define OLIVIA_DEFINE_HANDLE(object) typedef struct object##_Impl* object
+#define OLIVIA_DEFINE_HANDLE(object) typedef struct object##_t* object
 
 #define ARRAY_SIZE(array) (sizeof(array) / sizeof(array[0]))
 

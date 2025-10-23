@@ -1,13 +1,29 @@
 #pragma once
+#include "olivia/olivia_core.h"
+#include "olivia/olivia_graphics.h"
+#include "runtime/olivia_components.h"
 
-// Registry ( Entity )
+namespace olivia
+{
+	OLIVIA_DEFINE_HANDLE(registry);
 
-#include "Runtime/Olivia_Registry.h"
+	using entity_t = uint32_t;
 
-// Component
+	struct entity_info_t
+	{
+		cmesh_t     mesh;
+		cposition_t position;
+		crotation_t rotation;
+		cscale_t    scale;
+	};
 
-#include "Runtime/Olivia_Component.h"
+	registry create_registry();
 
-// System
+	void bind_registry(registry registry);
 
-#include "Runtime/Olivia_System.h"
+	entity_t create_entity(registry registry, const entity_info_t& info);
+
+	// system
+
+	void render_system();
+}
