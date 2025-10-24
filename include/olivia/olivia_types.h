@@ -2,7 +2,6 @@
 #include <vma/vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
-
 // --- math ---
 
 struct vec2_t { float x, y; };
@@ -31,9 +30,18 @@ struct instance2d_t
 	mat3_t transform; 
 };
 
-struct instance3d_t 
-{ 
-	mat4_t transform; 
+struct instance3d_t
+{
+	mat4_t transform;
+	vec4_t color;
+};
+
+// --- descriptor uniforms ---
+
+struct uniform_data_t
+{
+	mat4_t view;
+	mat4_t projection;
 };
 
 // --- graphics primitives ---
@@ -46,7 +54,6 @@ struct buffer_t
 };
 
 // --- graphics resources --- 
-
 
 struct pipeline_t
 {

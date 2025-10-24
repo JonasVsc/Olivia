@@ -1,7 +1,9 @@
 #include "olivia/olivia.h"
+#include "olivia/olivia_systems.h"
 
 #define VMA_IMPLEMENTATION
 #include<vma/vk_mem_alloc.h>
+
 
 context_t* g_context{ nullptr };
 
@@ -143,6 +145,19 @@ void init_vulkan_core()
 		VK_CHECK(vkCreateDevice(ctx.gpu, &device_info, nullptr, &ctx.device));
 
 		vkGetDeviceQueue(ctx.device, ctx.graphics_queue_index, 0, &ctx.queue);
+	}
+
+	// create vma
+	{
+		VmaAllocatorCreateInfo vma_info
+		{
+			.physicalDevice = ctx.gpu,
+			.device = ctx.device,
+			.instance = ctx.instance,
+			.vulkanApiVersion = VK_API_VERSION_1_3
+		};
+
+		VK_CHECK(vmaCreateAllocator(&vma_info, &ctx.allocator));
 	}
 
 	// create command_pool
@@ -309,6 +324,130 @@ void init_vulkan_core()
 	}
 }
 
+void init_buffers()
+{
+	context_t& ctx = *g_context;
+
+
+	for (uint32_t i = 0; i < MAX_FRAMES; ++i)
+	{
+		// --- init uniform buffer ---
+		
+		ctx.uniform_buffer[i] = create_buffer(
+			ctx.allocator,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			sizeof(uniform_data_t));
+		
+		// --- init storage buffer ---
+
+		ctx.instances_buffer[i] = create_buffer(
+			ctx.allocator,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			sizeof(instance3d_t) * MAX_INSTANCES);
+	}
+
+}
+
+void init_descriptors()
+{
+	context_t& ctx = *g_context;
+
+	// --- descriptor pool ---
+
+	VkDescriptorPoolSize pool_sizes[]
+	{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_FRAMES },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_FRAMES }
+	};
+
+	VkDescriptorPoolCreateInfo descriptor_pool_info
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.maxSets = MAX_FRAMES,
+		.poolSizeCount = ARRAY_SIZE(pool_sizes),
+		.pPoolSizes = pool_sizes
+	};
+
+	VK_CHECK(vkCreateDescriptorPool(ctx.device, &descriptor_pool_info, nullptr, &ctx.descriptor_pool));
+
+	// --- set layout ---
+
+	VkDescriptorSetLayoutBinding set_layout_bindings[]
+	{
+		// view, projection
+		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT },
+		// instances
+		{ 1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT },
+	};
+	
+	VkDescriptorSetLayoutCreateInfo set_layout_info
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = ARRAY_SIZE(set_layout_bindings),
+		.pBindings = set_layout_bindings
+	};
+
+	VK_CHECK(vkCreateDescriptorSetLayout(ctx.device, &set_layout_info, nullptr, &ctx.set_layout));
+
+	// --- sets ---
+
+	VkDescriptorSetAllocateInfo set_allocate_info
+	{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = ctx.descriptor_pool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &ctx.set_layout,
+	};
+
+	for (uint32_t i = 0; i < MAX_FRAMES; ++i)
+	{
+		vkAllocateDescriptorSets(ctx.device, &set_allocate_info, &ctx.set[i]);
+
+		VkDescriptorBufferInfo uniform_info
+		{
+			.buffer = ctx.uniform_buffer[i].buffer,
+			.offset = 0,
+			.range = sizeof(uniform_data_t)
+		};
+
+		VkDescriptorBufferInfo storage_info
+		{
+			.buffer = ctx.instances_buffer[i].buffer,
+			.offset = 0,
+			.range = sizeof(instance3d_t) * MAX_INSTANCES
+		};
+
+		VkWriteDescriptorSet write_sets[]
+		{
+			// view, projection
+			{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = ctx.set[i],
+				.dstBinding = 0,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.pBufferInfo = &uniform_info
+			},
+
+			// instances
+			{
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet = ctx.set[i],
+				.dstBinding = 1,
+				.descriptorCount = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.pBufferInfo = &storage_info
+			}
+		};
+
+		vkUpdateDescriptorSets(ctx.device, ARRAY_SIZE(write_sets), write_sets, 0, nullptr);
+	}
+}
+
 void init_pipelines()
 {
 	context_t& ctx = *g_context;
@@ -321,13 +460,6 @@ void init_pipelines()
 			.stride = sizeof(vertex2d_t),
 			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 		},
-
-		// Binding point 1: Instanced data at per-instance rate
-		{
-			.binding = 1,
-			.stride = sizeof(instance2d_t),
-			.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
-		}
 	};
 
 	VkVertexInputBindingDescription vertex_bindings_3d[]
@@ -338,39 +470,21 @@ void init_pipelines()
 			.stride = sizeof(vertex3d_t),
 			.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 		},
-
-		// Binding point 1: Instanced data at per-instance rate
-		{
-			.binding = 1,
-			.stride = sizeof(instance3d_t),
-			.inputRate = VK_VERTEX_INPUT_RATE_INSTANCE
-		}
 	};
 
 	VkVertexInputAttributeDescription vertex_attributes_2d[]
 	{
-		// Per-vertex attributes
+		// Binding point 0: vertex data
 		{0, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex2d_t, position)},
 		{1, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex2d_t, normal)},
-
-		// Per-instance attributes
-		{2, 1, VK_FORMAT_R32G32B32_SFLOAT, 0},
-		{3, 1, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 3},
-		{4, 1, VK_FORMAT_R32G32B32_SFLOAT, sizeof(float) * 6},
 	};
 
 	VkVertexInputAttributeDescription vertex_attributes_3d[]
 	{
-		// Per-vertex attributes
+		// Binding point 0: vertex data
 		{0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(vertex3d_t, position)},
 		{1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(vertex3d_t, normal)},
 		{2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(vertex3d_t, uv)},
-
-		// Per-instance attributes
-		{3, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 0},
-		{4, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 4},
-		{5, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 8},
-		{6, 1, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(float) * 12},
 	};
 
 	// --- 2D ---
@@ -382,6 +496,8 @@ void init_pipelines()
 		.vertex_bindings = vertex_bindings_2d,
 		.vertex_attribute_count = ARRAY_SIZE(vertex_attributes_2d),
 		.vertex_attributes = vertex_attributes_2d,
+		.set_layout_count = 1,
+		.set_layouts = &ctx.set_layout
 	});
 
 	// --- 3D ---
@@ -392,8 +508,117 @@ void init_pipelines()
 		.vertex_binding_count = ARRAY_SIZE(vertex_bindings_3d),
 		.vertex_bindings = vertex_bindings_3d,
 		.vertex_attribute_count = ARRAY_SIZE(vertex_attributes_3d),
-		.vertex_attributes = vertex_attributes_3d
+		.vertex_attributes = vertex_attributes_3d,
+		.set_layout_count = 1,
+		.set_layouts = &ctx.set_layout
 	});
+}
+
+void init_meshes()
+{
+	context_t& ctx = *g_context;
+
+	// --- quad mesh ---
+
+	vertex2d_t* vertices = (vertex2d_t*)calloc(4, sizeof(vertex2d_t));
+	uint32_t* indices = (uint32_t*)calloc(6, sizeof(uint32_t));
+
+	if (vertices && indices)
+	{
+		vertices[0] = { {-1.0f,-1.0f }, { 0.0f, 0.0f } };
+		vertices[1] = { { 1.0f,-1.0f }, { 0.0f, 0.0f } };
+		vertices[2] = { { 1.0f, 1.0f }, { 0.0f, 0.0f } };
+		vertices[3] = { {-1.0f, 1.0f }, { 0.0f, 0.0f } };
+
+		indices[0] = 0;
+		indices[1] = 1;
+		indices[2] = 2;
+		indices[3] = 2;
+		indices[4] = 3;
+		indices[5] = 0;
+
+		size_t vertices_size = 4 * sizeof(vertex2d_t);
+		size_t indices_size  = 6 * sizeof(uint32_t);
+
+		// --- mesh buffers ---
+
+		mesh_t& quad_mesh = ctx.meshes[MESH_QUAD];
+
+
+		quad_mesh.vertex_buffer = create_buffer(
+			ctx.allocator,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			vertices_size);
+
+		quad_mesh.index_buffer = create_buffer(
+			ctx.allocator,
+			VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			indices_size);
+
+		if (quad_mesh.vertex_buffer.info.pMappedData && quad_mesh.index_buffer.info.pMappedData)
+		{
+			memcpy(quad_mesh.vertex_buffer.info.pMappedData, vertices, vertices_size);
+			memcpy(quad_mesh.index_buffer.info.pMappedData, indices, indices_size);
+		}
+
+		free(vertices);
+		free(indices);
+	}
+
+}
+
+void init_scene()
+{
+	context_t& ctx = *g_context;
+
+	// --- init camera ---
+
+	for (auto& cam : ctx.camera_data)
+		cam.view = mat4_identity();
+
+	ctx.camera_left = -ctx.window_width / 2.0f;
+	ctx.camera_right = ctx.window_width / 2.0f;
+	ctx.camera_bottom = -ctx.window_height / 2.0f;
+	ctx.camera_top = ctx.window_height / 2.0f;
+
+	ctx.camera_zoom = 0.08f;
+
+	// --- init instances ---
+
+	int rows = 30;
+	int cols = 30;
+
+	for (uint32_t i = 0; i < rows; ++i)
+	{
+		for (uint32_t j = 0; j < cols; ++j)
+		{
+			instance3d_t& instance = ctx.instances[ctx.instance_count++];
+			instance.transform = mat4_identity();
+
+			float gap = 5.0f;
+
+			float row = (float)i * gap;
+			float col = (float)j * gap;
+
+
+			instance.color = { row * 0.002f, col * 0.002f, (row / col) * 0.002f, 1.0f };
+			if (i == 0 && j == 0)
+				instance.color = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+			mat4_translate(instance.transform, { col, row, 0.0f });
+
+			printf("(%.1f, %.1f)\n", col, row);
+		}
+	}
+
+	for (auto& instance_buffer : ctx.instances_buffer)
+	{
+		memcpy(instance_buffer.info.pMappedData, ctx.instances, sizeof(instance3d_t) * ctx.instance_count);
+	}
 }
 
 void begin_frame()
@@ -576,8 +801,9 @@ int main(int argc, char* args[])
 	context_t& ctx = *g_context;
 
 	// --- window ---
-
-	ctx.window = SDL_CreateWindow("olivia", 640, 480, SDL_WINDOW_VULKAN);
+	ctx.window_width  = 640.0f;
+	ctx.window_height = 480.0f;
+	ctx.window        = SDL_CreateWindow("olivia", (int)ctx.window_width, (int)ctx.window_height, SDL_WINDOW_VULKAN);
 
 	if (!ctx.window)
 	{
@@ -591,28 +817,84 @@ int main(int argc, char* args[])
 
 	// --- renderer resources ---
 
+	init_buffers();
+
+	init_descriptors();
+
 	init_pipelines();
 
+	init_meshes();
+
+	init_scene();
+
 	// --- run ---
+
+	ctx.delta_time = 0.016f;
 
 	bool running = true;
 	while (running)
 	{
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
+		update_input_state();
+
+		while (SDL_PollEvent(&ctx.event))
 		{
-			if (event.type == SDL_EVENT_QUIT)
-			{
+			if (ctx.event.type == SDL_EVENT_QUIT)
 				running = false;
-			}
 
-			begin_frame();
-
-			end_frame();
+			input_system();
 		}
+
+		particle_system();
+
+		camera_system();
+
+		instance_system();
+
+		begin_frame();
+
+		// draw
+		{
+			VkCommandBuffer cmd = ctx.command_buffers[ctx.current_frame];
+
+			vkCmdBindDescriptorSets(cmd, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS, ctx.pipelines[PIPELINE_2D].layout,
+				0, 1, &ctx.set[ctx.current_frame],
+				0, nullptr);
+
+			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, ctx.pipelines[PIPELINE_2D].pipeline);
+
+			VkDeviceSize offsets[]{ 0 };
+			vkCmdBindVertexBuffers(cmd, 0, 1, &ctx.meshes[MESH_QUAD].vertex_buffer.buffer, offsets);
+			vkCmdBindIndexBuffer(cmd, ctx.meshes[MESH_QUAD].index_buffer.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdDrawIndexed(cmd, 6, ctx.instance_count, 0, 0, 0);
+		}
+
+		end_frame();
 	}
 
 	return 0;
+}
+
+buffer_t create_buffer(VmaAllocator allocator, VkBufferUsageFlags usage_flags, VmaMemoryUsage memory_usage, VmaAllocationCreateFlags allocation_flags, VkDeviceSize size)
+{
+	VkBufferCreateInfo buffer_create_info
+	{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = (VkDeviceSize)size,
+		.usage = usage_flags
+	};
+
+	VmaAllocationCreateInfo allocation_create_info
+	{
+		.flags = allocation_flags,
+		.usage = memory_usage,
+	};
+
+	buffer_t buffer{};
+	VK_CHECK(vmaCreateBuffer(allocator, &buffer_create_info, &allocation_create_info, &buffer.buffer, &buffer.allocation, &buffer.info));
+
+	return buffer;
 }
 
 VkShaderModule create_shader_module(VkDevice device, const char* shader_path)

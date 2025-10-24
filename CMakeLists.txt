@@ -25,7 +25,7 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3)
 
-add_executable(olivia "src/olivia.cpp" "src/olivia_types.h")
+add_executable(olivia "src/olivia.cpp" "src/olivia_systems.cpp")
 
 target_link_libraries(olivia PRIVATE SDL3::SDL3 Vulkan::Vulkan)
 target_include_directories(olivia PRIVATE include)
