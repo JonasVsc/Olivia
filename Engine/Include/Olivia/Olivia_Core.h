@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/Olivia_Defines.h"
+#include "core/defines.h"
 
-#include "Core/Olivia_Logger.h"
+#include "core/logger.h"
 

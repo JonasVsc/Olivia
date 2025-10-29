@@ -1,25 +1,19 @@
-include_directories(Include)
-include_directories(Source)
-
 set(OLIVIA_SOURCE
-	"Source/Olivia_Graphics.cpp"
-	"Source/Olivia_Runtime.cpp"
-	"Source/Olivia_Events.cpp"
-	"Source/Olivia_Engine.cpp"
+	"src/olivia.cpp"
+	"src/olivia_graphics.cpp"
 )
 
-add_executable(Olivia ${OLIVIA_SOURCE})
+add_executable(olivia ${OLIVIA_SOURCE})
 
-target_link_libraries(Olivia PRIVATE Vulkan::Vulkan SDL3::SDL3 EnTT::EnTT)
+target_link_libraries(olivia PRIVATE Vulkan::Vulkan SDL3::SDL3)
 
-target_include_directories(Olivia PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Include)
-target_include_directories(Olivia PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Source)
+target_include_directories(olivia PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-	target_compile_definitions(Olivia PUBLIC OLIVIA_DEBUG)
+	target_compile_definitions(olivia PRIVATE OLIVIA_DEBUG)
 endif()
 
-set(SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Shaders")
+set(SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
 set(SHADERS
 	"${SHADER_DIR}/olivia.vert"
@@ -44,8 +38,8 @@ add_custom_target(
 	DEPENDS ${COMPILED_SHADERS}
 )
 
-add_custom_command(TARGET Olivia POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Copying shaders to: $<TARGET_FILE_DIR:Olivia>"
+add_custom_command(TARGET olivia POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E echo "Copying shaders to: $<TARGET_FILE_DIR:olivia>"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         "${SHADER_DIR}"
-        $<TARGET_FILE_DIR:Olivia>)
+        $<TARGET_FILE_DIR:olivia>)
