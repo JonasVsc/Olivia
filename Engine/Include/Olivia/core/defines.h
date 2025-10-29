@@ -1,12 +1,9 @@
 #pragma once
 
-#include <stdexcept>
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
 #include <cstdio>
-
-#include <SDL3/SDL.h>
 
 #define OLIVIA_API extern "C" __declspec(dllexport)
 
