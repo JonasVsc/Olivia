@@ -6,6 +6,7 @@
 namespace olivia
 {
 	static vulkan_core_t vulkan_core{};
+	static renderer_t    renderer{};
 
 	void init_vulkan_core(SDL_Window* window)
 	{
@@ -329,8 +330,6 @@ namespace olivia
 
 	void destroy_vulkan_core()
 	{
-		vkDeviceWaitIdle(vulkan_core.device);
-
 		vkDestroyCommandPool(vulkan_core.device, vulkan_core.command_pool, nullptr);
 
 		for (uint32_t i = 0; i < MAX_FRAMES; ++i)
@@ -350,6 +349,20 @@ namespace olivia
 		vkDestroyDevice(vulkan_core.device, nullptr);
 		vkDestroySurfaceKHR(vulkan_core.instance, vulkan_core.surface, nullptr);
 		vkDestroyInstance(vulkan_core.instance, nullptr);
+	}
+
+	void init_renderer(SDL_Window* window)
+	{
+		init_vulkan_core(window);
+		init_mesh_group();
+	}
+
+	void destroy_renderer()
+	{
+		vkDeviceWaitIdle(vulkan_core.device);
+
+		destroy_mesh_group();
+		destroy_vulkan_core();
 	}
 
 	void recreate_swapchain()
@@ -654,5 +667,62 @@ namespace olivia
 		vmaDestroyBuffer(vulkan_core.allocator, buffer.buffer, buffer.allocation);
 	}
 
+	void init_mesh_group()
+	{
+		renderer.mesh_group.vertex_buffer = create_vulkan_buffer(
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			MESH_GROUP_V_BUFFER_SIZE);
+
+		renderer.mesh_group.index_buffer = create_vulkan_buffer(
+			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VMA_MEMORY_USAGE_AUTO,
+			VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+			MESH_GROUP_I_BUFFER_SIZE);
+	}
+
+	void destroy_mesh_group()
+	{
+		vmaDestroyBuffer(vulkan_core.allocator, renderer.mesh_group.vertex_buffer.buffer, renderer.mesh_group.vertex_buffer.allocation);
+		vmaDestroyBuffer(vulkan_core.allocator, renderer.mesh_group.index_buffer.buffer, renderer.mesh_group.index_buffer.allocation);
+	}
+
+	mesh_t upload_mesh(const void* vertices, uint32_t vertex_count, const void* indices, uint32_t index_count)
+	{
+		mesh_group_t& mesh_group = renderer.mesh_group;
+
+		size_t vertices_size = vertex_count * sizeof(vertex3d_t);
+		size_t indices_size  = index_count * sizeof(uint32_t);
+
+		assert(mesh_group.mesh_count < MAX_MESHES);
+		assert(mesh_group.v_bytes_used + vertices_size < MESH_GROUP_V_BUFFER_SIZE && "mesh group vertex buffer overflow");
+		assert(mesh_group.i_bytes_used + indices_size < MESH_GROUP_I_BUFFER_SIZE && "mesh group index buffer overflow");
+
+		mesh_t mesh = mesh_group.mesh_count++;
+		
+		uint32_t v_offset{};
+		uint32_t i_offset{};
+
+		if (mesh != 0)
+		{
+			v_offset = mesh_group.v_offset[mesh - 1] + mesh_group.v_count[mesh - 1] * sizeof(vertex3d_t);
+			i_offset = mesh_group.i_offset[mesh - 1] + mesh_group.i_count[mesh - 1] * sizeof(uint32_t);
+		}
+
+		memcpy((uint8_t*)mesh_group.vertex_buffer.info.pMappedData + v_offset, vertices, vertices_size);
+		memcpy((uint8_t*)mesh_group.index_buffer.info.pMappedData + i_offset, indices, indices_size);
+
+		mesh_group.v_count[mesh] = vertex_count;
+		mesh_group.i_count[mesh] = index_count;
+
+		mesh_group.i_offset[mesh] = i_offset;
+		mesh_group.i_offset[mesh] = v_offset;
+
+		mesh_group.v_bytes_used += vertices_size;
+		mesh_group.i_bytes_used += indices_size;
+
+		return mesh;
+	}
 
 } // olivia

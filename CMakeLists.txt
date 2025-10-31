@@ -22,6 +22,17 @@ FetchContent_Declare(
     GIT_TAG release-3.2.20
 )
 
+FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.11.0
+)
+
 FetchContent_MakeAvailable(SDL3)
+FetchContent_MakeAvailable(Catch2)
+
+enable_testing()
 
 add_subdirectory("engine")
+add_subdirectory("tests")
+add_subdirectory("samples")

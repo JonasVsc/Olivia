@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cassert>
+#include <cstdlib>
 #include <cstdio>
 
 #define OLIVIA_API extern "C" __declspec(dllexport)

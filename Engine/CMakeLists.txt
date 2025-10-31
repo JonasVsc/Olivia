@@ -1,5 +1,6 @@
 set(OLIVIA_SOURCE
 	"src/olivia.cpp"
+	"src/olivia_platform.cpp"
 	"src/olivia_graphics.cpp"
 )
 
